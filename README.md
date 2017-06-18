@@ -5,6 +5,10 @@ Coding challenge from shutterfly.
 
 ## Overview
 
+## Running
+Run the script from the project home directory:
+`. src/clv.sh`
+
 ## Requirements
 
 ## License
