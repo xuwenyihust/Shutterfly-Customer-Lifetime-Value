@@ -32,7 +32,7 @@ Use pytest for testing
   
 * `TopXSimpleLTVCustomers`
 
-  The `TopXSimpleLTVCustomers` method takes O(n * logn) time(n: # custimers).
+  The `TopXSimpleLTVCustomers` method takes O(n * logn) time(n: # customers).
   
 
 ## Edge Cases
