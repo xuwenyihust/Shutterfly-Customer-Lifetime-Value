@@ -1,2 +1,2 @@
 #!/bin/bash
-python src/clv.py -i /input/events.txt -o /output/output.txt
+python src/clv.py -i /input/events.txt -o /output/output.txt -x 10

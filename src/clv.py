@@ -19,6 +19,7 @@ class customer_info(object):
 		self.num_visits = 0
 
 	# The function that ingest event to the corresponding customer
+	# O(1)
 	def ingest(self, event):
 		# Append the site visit
 		if event['type'] == 'SITE_VISIT':
@@ -35,6 +36,7 @@ class customer_info(object):
 			#else:
 
 	# Extract money value
+	# O(1)
 	def get_amount(self, total_amount):
 		money_value = total_amount.split()[0]
 		try:
@@ -148,7 +150,8 @@ def top_x_simple_ltv_customers(x, D):
 
 	res = []
 	for i in range(min(x, len(customer_ltv_heap))):
-		x = heapq.heappop(customer_ltv_heap)[1]
+		tmp = heapq.heappop(customer_ltv_heap)
+		x = (-1*tmp[0], tmp[1])
 		res.append(x)
 	
 	return res	
@@ -159,6 +162,7 @@ def argument_parse():
 	parser = argparse.ArgumentParser()
 	parser.add_argument("-i", help="input data")
 	parser.add_argument("-o", help="output data")
+	parser.add_argument("-x", help="top x")
 	args = parser.parse_args()
 	return args
 
@@ -187,13 +191,17 @@ def main():
 	# Iterate each incoming event
 	customer_map, tf = event_iteration(events_file, customer_map, tf)
 
-	print(len(customer_map))
-	print(tf.start_time)
-	print(tf.end_time)
+	#print(len(customer_map))
+	#print(tf.start_time)
+	#print(tf.end_time)
 
-	top_3_simple_ltv_customers = top_x_simple_ltv_customers(3, [customer_map, tf])
-	print(top_3_simple_ltv_customers)
+	top_X_simple_ltv_customers = top_x_simple_ltv_customers(int(args.x), [customer_map, tf])
+	#print(top_X_simple_ltv_customers)
 
+	f_w = open(os.getcwd() + '/' + args.o, 'w')
+	for x in top_X_simple_ltv_customers:
+		f_w.write(x[1]+'\t'+str(x[0])+'\n')
+	f_w.close()
 
 if __name__ == "__main__":
 	main()
