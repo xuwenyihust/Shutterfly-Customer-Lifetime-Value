@@ -2,6 +2,7 @@ import os
 import json
 import argparse
 from datetime import datetime
+import heapq
 
 
 class customer_info(object):
@@ -91,40 +92,105 @@ class time_frame(object):
 			return self.end_time
 
 
-def main():
+# Ingest the coming event to customer_info & time_frame
+def ingest(event, D):
+	customer_map, tf = D
+
+	# Check the event type
+	if event['type'] == 'CUSTOMER':
+		customer_id =  event['key']
+	else:
+		customer_id = event['customer_id']
+
+	# New customer
+	if customer_id not in customer_map:
+		ci = customer_info(customer_id)
+		customer_map[customer_id] = ci			
+	# Existing customer
+	else:
+		ci = customer_map[customer_id]
+	# Ingest the incoming event
+	ci.ingest(event)
+	tf.ingest(event)
+
+	return customer_map, tf
+
+
+def top_x_simple_ltv_customers(x, D):
+	customer_map, tf = D
+	# LTV = 52(a) X t
+	# a: customer expenditures per visit (USD) x number of site visits per week
+	time_delta = datetime.strptime(tf.end_time, '%Y-%m-%d') - datetime.strptime(tf.start_time, '%Y-%m-%d')
+	week_delta = time_delta.days / 7
+	customer_list = list(customer_map.values())
+	# Use a max heap to store all the ltv
+	customer_ltv_heap = []
+
+	# Iterate each customer:
+	for customer in customer_list:
+		order_list = list(customer.orders.values())
+		customer_exp = sum(order_list)
+		# Get # visists
+		num_visit = customer.num_visits
+		# Get customer expenditures per visit (USD)
+		customer_exp_per_visit = customer_exp / num_visit
+		# Get number of site visits per week
+		num_visit_per_week = num_visit / week_delta
+		# Get LTV
+		a = customer_exp_per_visit * num_visit_per_week
+		t = week_delta
+		ltv = 52 * a * t
+		# Add the LTV to heap	
+		heapq.heappush(customer_ltv_heap, (ltv, customer.customer_id))
+
+	res = []
+	for i in range(min(x, len(customer_ltv_heap))):
+		x = heapq.heappop(customer_ltv_heap)[1]
+		res.append(x)
+	
+	return res	
+	
+
+def argument_parse():
 	# Parse the given arguments
 	parser = argparse.ArgumentParser()
 	parser.add_argument("-i", help="input data")
 	parser.add_argument("-o", help="output data")
 	args = parser.parse_args()
+	return args
+
+
+def event_iteration(events_file, customer_map, tf):
+	with open(os.getcwd() + '/' + events_file) as input_file:
+		# Load the k-v pairs in input file as json objects
+		events = json.load(input_file)
+		for event in events:
+			customer_map, tf = ingest(event, [customer_map, tf])
+
+	return customer_map, tf
+
+
+def main():
+	# Get the parsed arguments	
+	args = argument_parse()
 
 	# Create a hashmap to direct customer_id to customer_info object
 	customer_map = dict()	
+	# Initialize the time_frame
+	tf = time_frame()
 
 	# Parse the input events
 	events_file = args.i
-	with open(os.getcwd() + '/' + events_file) as input_file:
-		# Load the k-v pairs in input file as json objects
-		events = json.load(input_file)	
-		for event in events:
-			# Check the event type
-			if event['type'] == 'CUSTOMER':
-				customer_id =  event['key']
-			else:
-				customer_id = event['customer_id']
+	# Iterate each incoming event
+	customer_map, tf = event_iteration(events_file, customer_map, tf)
 
-			# New customer
-			if customer_id not in customer_map:
-				ci = customer_info(customer_id)
-				customer_map[customer_id] = ci			
-			# Existing customer
-			else:
-				ci = customer_map[customer_id]
-			# Ingest the incoming event
-			ci.ingest(event)
+	print(len(customer_map))
+	print(tf.start_time)
+	print(tf.end_time)
 
-	#for key in customer_map:
-	#	print(key)
+	top_3_simple_ltv_customers = top_x_simple_ltv_customers(3, [customer_map, tf])
+	print(top_3_simple_ltv_customers)
+
 
 if __name__ == "__main__":
 	main()
