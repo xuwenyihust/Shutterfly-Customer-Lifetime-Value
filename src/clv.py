@@ -3,6 +3,8 @@ import json
 import argparse
 from datetime import datetime
 import heapq
+#from customer_info import customer_info
+#from time_frame import time_frame
 
 
 class customer_info(object):
@@ -92,6 +94,7 @@ class time_frame(object):
 			return self.end_time
 
 
+
 # Ingest the coming event to customer_info & time_frame
 def ingest(event, D):
 	customer_map, tf = D
@@ -123,7 +126,7 @@ def top_x_simple_ltv_customers(x, D):
 	time_delta = datetime.strptime(tf.end_time, '%Y-%m-%d') - datetime.strptime(tf.start_time, '%Y-%m-%d')
 	week_delta = time_delta.days / 7
 	customer_list = list(customer_map.values())
-	# Use a max heap to store all the ltv
+	# Use a heap to store all the ltv
 	customer_ltv_heap = []
 
 	# Iterate each customer:
@@ -138,10 +141,10 @@ def top_x_simple_ltv_customers(x, D):
 		num_visit_per_week = num_visit / week_delta
 		# Get LTV
 		a = customer_exp_per_visit * num_visit_per_week
-		t = week_delta
+		t = 10
 		ltv = 52 * a * t
 		# Add the LTV to heap	
-		heapq.heappush(customer_ltv_heap, (ltv, customer.customer_id))
+		heapq.heappush(customer_ltv_heap, (-1*ltv, customer.customer_id))
 
 	res = []
 	for i in range(min(x, len(customer_ltv_heap))):
